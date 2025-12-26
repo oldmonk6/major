@@ -1,10 +1,12 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import React, { useState } from "react";
 
 const apiBase = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 
 export default function CoachPage() {
+  const router = useRouter();
   const [token, setToken] = useState("");
   const [riskBucket, setRiskBucket] = useState("Low");
   const [lastTask, setLastTask] = useState("");
@@ -14,11 +16,18 @@ export default function CoachPage() {
 
   React.useEffect(() => {
     const stored = localStorage.getItem("reclaim_token");
-    if (stored) setToken(stored);
-  }, []);
+    if (!stored) {
+      router.replace("/auth");
+      return;
+    }
+    setToken(stored);
+  }, [router]);
 
   const start = async () => {
-    if (!token) return;
+    if (!token) {
+      router.replace("/auth");
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch(`${apiBase}/coach/session`, {

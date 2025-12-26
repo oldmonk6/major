@@ -1,17 +1,23 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 
 const apiBase = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 
 export default function ProgressPage() {
+  const router = useRouter();
   const [token, setToken] = useState("");
   const [summary, setSummary] = useState<any>(null);
 
   useEffect(() => {
     const stored = localStorage.getItem("reclaim_token");
-    if (stored) setToken(stored);
-  }, []);
+    if (!stored) {
+      router.replace("/auth");
+      return;
+    }
+    setToken(stored);
+  }, [router]);
 
   const load = async () => {
     if (!token) return;

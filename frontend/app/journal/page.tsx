@@ -1,14 +1,13 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 
 const apiBase = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 
 async function deriveKey(password: string, salt: Uint8Array) {
   const enc = new TextEncoder();
-  const baseKey = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, [
-    "deriveKey",
-  ]);
+  const baseKey = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveKey"]);
   return crypto.subtle.deriveKey(
     { name: "PBKDF2", salt, iterations: 100_000, hash: "SHA-256" },
     baseKey,
@@ -32,6 +31,7 @@ async function encryptText(text: string, password: string) {
 }
 
 export default function JournalPage() {
+  const router = useRouter();
   const [text, setText] = useState("");
   const [password, setPassword] = useState("");
   const [tags, setTags] = useState("");
@@ -40,12 +40,17 @@ export default function JournalPage() {
 
   useEffect(() => {
     const stored = localStorage.getItem("reclaim_token");
-    if (stored) setToken(stored);
-  }, []);
+    if (!stored) {
+      router.replace("/auth");
+      return;
+    }
+    setToken(stored);
+  }, [router]);
 
   const submit = async () => {
     if (!token) {
       setStatus("Login first");
+      router.replace("/auth");
       return;
     }
     setStatus("Encrypting...");

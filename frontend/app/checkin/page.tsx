@@ -1,10 +1,12 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import React, { useState } from "react";
 
 const apiBase = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 
 export default function CheckInPage() {
+  const router = useRouter();
   const [token, setToken] = useState("");
   const [craving, setCraving] = useState(0);
   const [mood, setMood] = useState("");
@@ -14,12 +16,17 @@ export default function CheckInPage() {
 
   React.useEffect(() => {
     const stored = localStorage.getItem("reclaim_token");
-    if (stored) setToken(stored);
-  }, []);
+    if (!stored) {
+      router.replace("/auth");
+      return;
+    }
+    setToken(stored);
+  }, [router]);
 
   const submit = async () => {
     if (!token) {
       setStatus("Login first");
+      router.replace("/auth");
       return;
     }
     setStatus("Saving...");
@@ -35,7 +42,7 @@ export default function CheckInPage() {
         }),
       });
       const data = await res.json();
-      setStatus(`Saved check-in ${data.id || ""}`);
+      setStatus(res.ok ? `Saved check-in ${data.id || ""}` : data.detail || "Error");
     } catch (err) {
       console.error(err);
       setStatus("Error");

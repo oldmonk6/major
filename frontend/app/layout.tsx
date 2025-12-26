@@ -10,8 +10,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <header className="topbar">
           <div className="logo">RECLAIM</div>
           <nav className="nav">
+            <a href="/">Home</a>
             <a href="/auth">Auth</a>
-            <a href="/">Onboard</a>
+            <a href="/onboard">Onboard</a>
             <a href="/tasks">Tasks</a>
             <a href="/checkin">Check-in</a>
             <a href="/coach">Coach</a>
@@ -19,6 +20,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <a href="/journal">Journal</a>
             <a href="/progress">Progress</a>
             <a href="/sos">SOS</a>
+            <a href="/logout">Logout</a>
           </nav>
         </header>
         <main className="container">{children}</main>

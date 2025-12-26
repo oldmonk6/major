@@ -1,10 +1,12 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import React, { useState } from "react";
 
 const apiBase = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 
 export default function RiskPage() {
+  const router = useRouter();
   const [token, setToken] = useState("");
   const [risk, setRisk] = useState<any>(null);
   const [jit, setJit] = useState<any>(null);
@@ -13,8 +15,12 @@ export default function RiskPage() {
 
   React.useEffect(() => {
     const stored = localStorage.getItem("reclaim_token");
-    if (stored) setToken(stored);
-  }, []);
+    if (!stored) {
+      router.replace("/auth");
+      return;
+    }
+    setToken(stored);
+  }, [router]);
 
   const assess = async () => {
     if (!token) return;

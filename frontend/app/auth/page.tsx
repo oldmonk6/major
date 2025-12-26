@@ -1,10 +1,12 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 
 const apiBase = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 
 export default function AuthPage() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [token, setToken] = useState("");
@@ -14,9 +16,12 @@ export default function AuthPage() {
   useEffect(() => {
     const stored = localStorage.getItem("reclaim_token");
     const uid = localStorage.getItem("reclaim_user_id");
-    if (stored) setToken(stored);
-    if (uid) setUserId(uid);
-  }, []);
+    if (stored) {
+      setToken(stored);
+      if (uid) setUserId(uid);
+      router.replace("/onboard");
+    }
+  }, [router]);
 
   const handle = async (path: "register" | "login") => {
     setStatus("Working...");
@@ -33,6 +38,7 @@ export default function AuthPage() {
         localStorage.setItem("reclaim_token", data.token);
         localStorage.setItem("reclaim_user_id", data.user_id);
         setStatus("Success");
+        router.replace("/onboard");
       } else {
         setStatus(data.detail || "Error");
       }
