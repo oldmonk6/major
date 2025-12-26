@@ -43,23 +43,63 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="card">
-      <h1>Auth</h1>
-      <label className="label">Email</label>
-      <input className="input" value={email} onChange={(e) => setEmail(e.target.value)} />
-      <label className="label">Password</label>
-      <input className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
-      <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-        <button className="button" onClick={() => handle("register")}>Register</button>
-        <button className="button" onClick={() => handle("login")}>Login</button>
-      </div>
-      {status && <p>{status}</p>}
-      {token && (
-        <div style={{ marginTop: 8 }}>
-          <div>Token saved locally.</div>
-          <div>User ID: {userId}</div>
+    <div style={{ maxWidth: "480px", margin: "0 auto" }}>
+      <div className="card">
+        <h1>Authentication</h1>
+        <p style={{ marginBottom: "24px" }}>Sign in or create an account to access your recovery journey.</p>
+
+        <label className="label">Email</label>
+        <input
+          className="input"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="your@email.com"
+        />
+
+        <label className="label">Password</label>
+        <input
+          className="input"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Enter your password"
+        />
+
+        <div style={{ display: "flex", gap: "12px", marginTop: "24px" }}>
+          <button className="button" onClick={() => handle("register")} style={{ flex: 1 }}>
+            Register
+          </button>
+          <button className="button" onClick={() => handle("login")} style={{ flex: 1 }}>
+            Login
+          </button>
         </div>
-      )}
+
+        {status && (
+          <div style={{
+            marginTop: "16px",
+            padding: "12px",
+            borderRadius: "8px",
+            background: status === "Success" ? "rgba(16, 185, 129, 0.1)" : "rgba(239, 68, 68, 0.1)",
+            color: status === "Success" ? "var(--success)" : "var(--error)",
+            textAlign: "center",
+            fontWeight: 600
+          }}>
+            {status}
+          </div>
+        )}
+
+        {token && (
+          <div className="card" style={{ marginTop: "16px", background: "var(--bg-secondary)" }}>
+            <div style={{ fontSize: "14px", color: "var(--success)", marginBottom: "8px", fontWeight: 600 }}>
+              Authenticated Successfully
+            </div>
+            <div style={{ fontSize: "13px", color: "var(--text-tertiary)" }}>
+              User ID: <code style={{ color: "var(--primary)" }}>{userId}</code>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

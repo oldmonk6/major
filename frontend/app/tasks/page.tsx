@@ -44,21 +44,37 @@ export default function TasksPage() {
 
   return (
     <div className="card">
-      <h1>Today's Tasks</h1>
-      <button className="button" onClick={load} disabled={!token || loading}>
-        Refresh
-      </button>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+        <h1 style={{ margin: 0 }}>Today's Tasks</h1>
+        <button className="button" onClick={load} disabled={!token || loading} style={{ margin: 0 }}>
+          {loading ? "Loading..." : "Refresh"}
+        </button>
+      </div>
+      {tasks.length === 0 && (
+        <div style={{ textAlign: "center", padding: "48px 16px", color: "var(--text-tertiary)" }}>
+          <p>No tasks available. Complete onboarding to generate your personalized plan.</p>
+        </div>
+      )}
       <ul className="list">
         {tasks.map((t) => (
-          <li key={t.id} className="card">
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div>
-                <strong>{t.title}</strong>
-                <div>Status: {t.status}</div>
-                <div>XP: {t.xp}</div>
+          <li key={t.id} className="card" style={{ marginBottom: "16px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "16px" }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+                  <strong style={{ fontSize: "18px" }}>{t.title}</strong>
+                  <span className="pill" style={{ margin: 0 }}>{t.status}</span>
+                </div>
+                {t.details?.rationale && (
+                  <p style={{ margin: "8px 0", fontSize: "14px" }}>{t.details.rationale}</p>
+                )}
+                <div style={{ display: "flex", gap: "16px", fontSize: "14px", color: "var(--text-tertiary)" }}>
+                  <span>XP: <strong style={{ color: "var(--primary)" }}>{t.xp}</strong></span>
+                  {t.details?.est_time && <span>Time: {t.details.est_time}</span>}
+                  {t.details?.difficulty && <span>Difficulty: {t.details.difficulty}</span>}
+                </div>
               </div>
               {t.status !== "completed" && (
-                <button className="button" onClick={() => complete(t.id)}>
+                <button className="button" onClick={() => complete(t.id)} style={{ margin: 0, whiteSpace: "nowrap" }}>
                   Complete
                 </button>
               )}
