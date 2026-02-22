@@ -1,21 +1,20 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 
+type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
+  children: React.ReactNode;
+  variant?: 'primary' | 'secondary' | 'danger';
+  size?: 'sm' | 'md' | 'lg';
+};
+
 export function Button({
   children,
-  onClick,
   disabled = false,
   variant = 'primary',
   size = 'md',
   className = '',
-}: {
-  children: React.ReactNode;
-  onClick?: () => void;
-  disabled?: boolean;
-  variant?: 'primary' | 'secondary' | 'danger';
-  size?: 'sm' | 'md' | 'lg';
-  className?: string;
-}) {
+  ...rest
+}: ButtonProps) {
   const baseClass = 'button';
   const variantClass =
     variant === 'secondary' ? 'button-secondary' : variant === 'danger' ? 'button-danger' : '';
@@ -23,9 +22,9 @@ export function Button({
 
   return (
     <button
-      onClick={onClick}
       disabled={disabled}
       className={cn(baseClass, variantClass, sizeClass, className)}
+      {...rest}
     >
       {children}
     </button>
@@ -39,14 +38,8 @@ export function Input({
   type = 'text',
   disabled = false,
   className = '',
-}: {
-  value: string;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  placeholder?: string;
-  type?: string;
-  disabled?: boolean;
-  className?: string;
-}) {
+  ...rest
+}: React.InputHTMLAttributes<HTMLInputElement>) {
   return (
     <input
       type={type}
@@ -55,6 +48,7 @@ export function Input({
       placeholder={placeholder}
       disabled={disabled}
       className={cn('input', className)}
+      {...rest}
     />
   );
 }
@@ -66,14 +60,8 @@ export function Textarea({
   disabled = false,
   rows = 4,
   className = '',
-}: {
-  value: string;
-  onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
-  placeholder?: string;
-  disabled?: boolean;
-  rows?: number;
-  className?: string;
-}) {
+  ...rest
+}: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
   return (
     <textarea
       value={value}
@@ -82,6 +70,7 @@ export function Textarea({
       disabled={disabled}
       rows={rows}
       className={cn('textarea', className)}
+      {...rest}
     />
   );
 }
@@ -89,11 +78,13 @@ export function Textarea({
 export function Card({
   children,
   className = '',
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return <div className={cn('card', className)}>{children}</div>;
+  ...rest
+}: React.HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div className={cn('card', className)} {...rest}>
+      {children}
+    </div>
+  );
 }
 
 export function SectionHeader({
@@ -224,15 +215,16 @@ export function Skeleton({
   width = '100%',
   height = '1rem',
   className = '',
-}: {
+  ...rest
+}: React.HTMLAttributes<HTMLDivElement> & {
   width?: string;
   height?: string;
-  className?: string;
 }) {
   return (
     <div
       className={cn('skeleton', className)}
       style={{ width, height, marginBottom: '1rem' }}
+      {...rest}
     />
   );
 }

@@ -22,6 +22,7 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     plans: Mapped[List["Plan"]] = relationship(back_populates="user")
+    coach_sessions: Mapped[List["CoachSession"]] = relationship(back_populates="user")
 
 
 class Plan(Base):
@@ -123,3 +124,31 @@ class Alert(Base):
     type: Mapped[str] = mapped_column(String)
     payload_json: Mapped[Dict[str, Any]] = mapped_column(JSON)
     ts: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class CoachSession(Base):
+    __tablename__ = "coach_sessions"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=uuid4_str)
+    user_id: Mapped[str] = mapped_column(String, ForeignKey("users.id"))
+    title: Mapped[str] = mapped_column(String, default="New chat")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user: Mapped["User"] = relationship(back_populates="coach_sessions")
+    messages: Mapped[List["CoachMessage"]] = relationship(
+        back_populates="session",
+        cascade="all, delete-orphan",
+    )
+
+
+class CoachMessage(Base):
+    __tablename__ = "coach_messages"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=uuid4_str)
+    session_id: Mapped[str] = mapped_column(String, ForeignKey("coach_sessions.id"))
+    role: Mapped[str] = mapped_column(String)  # user | assistant
+    content: Mapped[str] = mapped_column(Text)
+    ts: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    session: Mapped["CoachSession"] = relationship(back_populates="messages")

@@ -11,7 +11,6 @@ from .security import create_access_token, hash_password, verify_password, pwd_c
 
 router = APIRouter(prefix="/auth")
 
-
 @router.post("/register")
 async def register(
     payload: Dict[str, Any],

@@ -41,6 +41,20 @@ class LLMClient:
             logger.error("LLM call failed", exc_info=exc)
             return {}
 
+    def _chat_text(self, system: str, user: str, max_tokens: int = 800) -> str:
+        prompt = system + "\n\n" + user
+        if not self.client or not genai:
+            return ""
+        try:
+            resp = self.client.models.generate_content(
+                model=self.model_name,
+                contents=prompt,
+            )
+            return (resp.text or "").strip()
+        except Exception as exc:
+            logger.error("LLM text call failed", exc_info=exc)
+            return ""
+
     async def generate_plan(self, user_profile: Dict[str, Any]) -> Dict[str, Any]:
         system = (
             "You are a recovery coach. Create a structured, staged plan for addiction recovery. "
@@ -65,6 +79,26 @@ class LLMClient:
         )
         user = f"Context: {context}"
         return self._chat_json(system, user, max_tokens=600)
+
+    async def coach_chat_reply(self, history: List[Dict[str, str]]) -> str:
+        system = (
+            "You are a compassionate addiction-recovery coach. "
+            "Respond in a warm, practical, non-judgmental tone. "
+            "Keep replies clear and concise. "
+            "When the user seems high-risk or asks for self-harm guidance, refuse harmful content and suggest immediate help "
+            "including 988 in the US. "
+            "Do not claim to be a therapist. "
+            "Use short paragraphs or bullet points when useful."
+        )
+        transcript_lines: List[str] = []
+        for m in history:
+            role = (m.get("role") or "").strip().lower()
+            content = (m.get("content") or "").strip()
+            if role not in {"user", "assistant"} or not content:
+                continue
+            transcript_lines.append(f"{role.upper()}: {content}")
+        user = "Conversation so far:\n" + "\n".join(transcript_lines) + "\n\nASSISTANT:"
+        return self._chat_text(system, user, max_tokens=800)
 
     async def jit_intervention(self, context: Dict[str, Any], actions: List[str]) -> Dict[str, Any]:
         system = (

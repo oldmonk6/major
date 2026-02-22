@@ -9,7 +9,7 @@ from datetime import timezone as dt_timezone, timedelta
 
 import numpy as np
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
-from sqlalchemy import select, update
+from sqlalchemy import desc, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .database import get_session
@@ -20,6 +20,8 @@ from .models import (
     BanditActionStat,
     BanditEvent,
     Checkin,
+    CoachMessage,
+    CoachSession,
     Journal,
     Plan,
     RiskScore,
@@ -30,6 +32,16 @@ from .models import (
 from .storage import put_object_from_fileobj
 
 router = APIRouter()
+
+
+def _serialize_coach_message(message: CoachMessage) -> Dict[str, Any]:
+    return {
+        "id": message.id,
+        "session_id": message.session_id,
+        "role": message.role,
+        "content": message.content,
+        "ts": message.ts.isoformat() if message.ts else None,
+    }
 
 
 def extract_first_day_tasks(plan: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -205,6 +217,146 @@ async def coach_session(
     if not flow:
         raise HTTPException(status_code=502, detail="Coach flow failed")
     return flow
+
+
+@router.get("/coach/sessions")
+async def list_coach_sessions(
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> Dict[str, Any]:
+    rows = (
+        await session.execute(
+            select(CoachSession)
+            .where(CoachSession.user_id == current_user.id)
+            .order_by(desc(CoachSession.updated_at))
+        )
+    ).scalars().all()
+    return {
+        "sessions": [
+            {
+                "id": s.id,
+                "title": s.title,
+                "created_at": s.created_at.isoformat() if s.created_at else None,
+                "updated_at": s.updated_at.isoformat() if s.updated_at else None,
+            }
+            for s in rows
+        ]
+    }
+
+
+@router.post("/coach/sessions")
+async def create_coach_session(
+    payload: Dict[str, Any],
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> Dict[str, Any]:
+    title = (payload.get("title") or "").strip() or "New chat"
+    row = CoachSession(user_id=current_user.id, title=title)
+    session.add(row)
+    await session.commit()
+    return {
+        "id": row.id,
+        "title": row.title,
+        "created_at": row.created_at.isoformat() if row.created_at else None,
+        "updated_at": row.updated_at.isoformat() if row.updated_at else None,
+    }
+
+
+@router.get("/coach/sessions/{session_id}")
+async def get_coach_session(
+    session_id: str,
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> Dict[str, Any]:
+    coach_session_row = (
+        await session.execute(
+            select(CoachSession).where(
+                CoachSession.id == session_id,
+                CoachSession.user_id == current_user.id,
+            )
+        )
+    ).scalar_one_or_none()
+    if not coach_session_row:
+        raise HTTPException(status_code=404, detail="Session not found")
+    messages = (
+        await session.execute(
+            select(CoachMessage)
+            .where(CoachMessage.session_id == coach_session_row.id)
+            .order_by(CoachMessage.ts.asc())
+        )
+    ).scalars().all()
+    return {
+        "session": {
+            "id": coach_session_row.id,
+            "title": coach_session_row.title,
+            "created_at": coach_session_row.created_at.isoformat() if coach_session_row.created_at else None,
+            "updated_at": coach_session_row.updated_at.isoformat() if coach_session_row.updated_at else None,
+        },
+        "messages": [_serialize_coach_message(m) for m in messages],
+    }
+
+
+@router.post("/coach/sessions/{session_id}/messages")
+async def create_coach_message(
+    session_id: str,
+    payload: Dict[str, Any],
+    session: AsyncSession = Depends(get_session),
+    llm: LLMClient = Depends(get_llm),
+    current_user: User = Depends(get_current_user),
+) -> Dict[str, Any]:
+    coach_session_row = (
+        await session.execute(
+            select(CoachSession).where(
+                CoachSession.id == session_id,
+                CoachSession.user_id == current_user.id,
+            )
+        )
+    ).scalar_one_or_none()
+    if not coach_session_row:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    user_message = (payload.get("message") or "").strip()
+    if not user_message:
+        raise HTTPException(status_code=400, detail="message is required")
+
+    user_row = CoachMessage(session_id=coach_session_row.id, role="user", content=user_message)
+    session.add(user_row)
+    await session.flush()
+
+    recent_messages = (
+        await session.execute(
+            select(CoachMessage)
+            .where(CoachMessage.session_id == coach_session_row.id)
+            .order_by(CoachMessage.ts.desc())
+            .limit(30)
+        )
+    ).scalars().all()
+    history = [
+        {"role": m.role, "content": m.content}
+        for m in reversed(recent_messages)
+    ]
+    reply = await llm.coach_chat_reply(history)
+    if not reply:
+        reply = "I hear you. Let's take this one step at a time. Tell me what feels hardest right now."
+
+    assistant_row = CoachMessage(session_id=coach_session_row.id, role="assistant", content=reply)
+    session.add(assistant_row)
+
+    if coach_session_row.title == "New chat":
+        coach_session_row.title = user_message[:60]
+    coach_session_row.updated_at = datetime.utcnow()
+
+    await session.commit()
+    return {
+        "session": {
+            "id": coach_session_row.id,
+            "title": coach_session_row.title,
+            "created_at": coach_session_row.created_at.isoformat() if coach_session_row.created_at else None,
+            "updated_at": coach_session_row.updated_at.isoformat() if coach_session_row.updated_at else None,
+        },
+        "user_message": _serialize_coach_message(user_row),
+        "assistant_message": _serialize_coach_message(assistant_row),
+    }
 
 
 @router.get("/tasks/today")
