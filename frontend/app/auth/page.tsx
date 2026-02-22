@@ -1,105 +1,198 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
+import { Card, Input, Button, Toast } from "@/components/ui";
+import { getAuthHeaders } from "@/lib/utils";
 
 const apiBase = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 
+type AuthMode = "login" | "register";
+
 export default function AuthPage() {
+  const [mode, setMode] = useState<AuthMode>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [token, setToken] = useState("");
-  const [userId, setUserId] = useState("");
-  const [status, setStatus] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
-  useEffect(() => {
-    const stored = localStorage.getItem("reclaim_token");
-    const uid = localStorage.getItem("reclaim_user_id");
-    if (stored) setToken(stored);
-    if (uid) setUserId(uid);
-  }, []);
+  const validateForm = () => {
+    if (!email || !password) {
+      setError("Email and password are required");
+      return false;
+    }
+    if (!/^\S+@\S+\.\S+$/.test(email)) {
+      setError("Please enter a valid email");
+      return false;
+    }
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters");
+      return false;
+    }
+    if (mode === "register" && password !== confirmPassword) {
+      setError("Passwords do not match");
+      return false;
+    }
+    return true;
+  };
 
-  const handle = async (path: "register" | "login") => {
-    setStatus("Working...");
+  const handleAuth = async () => {
+    setError("");
+    setSuccess("");
+
+    if (!validateForm()) return;
+
+    setLoading(true);
     try {
-      const res = await fetch(`${apiBase}/auth/${path}`, {
+      const endpoint = mode === "login" ? "/auth/login" : "/auth/register";
+      const res = await fetch(`${apiBase}${endpoint}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ email, password }),
       });
+
       const data = await res.json();
-      if (res.ok) {
-        setToken(data.token);
-        setUserId(data.user_id);
-        localStorage.setItem("reclaim_token", data.token);
-        localStorage.setItem("reclaim_user_id", data.user_id);
-        setStatus("Success");
-      } else {
-        setStatus(data.detail || "Error");
+
+      if (!res.ok) {
+        setError(data.error || "Authentication failed");
+        return;
       }
+
+      localStorage.setItem("reclaim_token", data.token);
+      localStorage.setItem("reclaim_user_id", data.user_id);
+      setSuccess(
+        mode === "login"
+          ? "Signed in successfully! Redirecting..."
+          : "Account created! Redirecting..."
+      );
+
+      setTimeout(() => {
+        window.location.href = "/onboard";
+      }, 1500);
     } catch (err) {
+      setError("Network error. Please try again.");
       console.error(err);
-      setStatus("Error");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div style={{ maxWidth: "480px", margin: "0 auto" }}>
-      <div className="card">
-        <h1>Authentication</h1>
-        <p style={{ marginBottom: "24px" }}>Sign in or create an account to access your recovery journey.</p>
+    <div style={{ maxWidth: "400px", margin: "0 auto", paddingTop: "2rem" }}>
+      <Card>
+        <h1 style={{ textAlign: "center", marginBottom: "0.5rem" }}>
+          {mode === "login" ? "Welcome Back" : "Create Account"}
+        </h1>
+        <p style={{ textAlign: "center", color: "var(--text-secondary)", marginBottom: "2rem" }}>
+          {mode === "login"
+            ? "Sign in to access your recovery plan"
+            : "Start your recovery journey with RECLAIM"}
+        </p>
 
         <label className="label">Email</label>
-        <input
-          className="input"
+        <Input
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="your@email.com"
+          disabled={loading}
         />
 
         <label className="label">Password</label>
-        <input
-          className="input"
+        <Input
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder="Enter your password"
+          placeholder="At least 8 characters"
+          disabled={loading}
         />
 
-        <div style={{ display: "flex", gap: "12px", marginTop: "24px" }}>
-          <button className="button" onClick={() => handle("register")} style={{ flex: 1 }}>
-            Register
-          </button>
-          <button className="button" onClick={() => handle("login")} style={{ flex: 1 }}>
-            Login
+        {mode === "register" && (
+          <>
+            <label className="label">Confirm Password</label>
+            <Input
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Confirm your password"
+              disabled={loading}
+            />
+          </>
+        )}
+
+        {error && (
+          <div
+            style={{
+              marginTop: "1rem",
+              padding: "0.75rem",
+              background: "rgba(239, 68, 68, 0.2)",
+              border: "1px solid #ef4444",
+              borderRadius: "0.5rem",
+              color: "#ef4444",
+              fontSize: "0.9rem",
+            }}
+          >
+            {error}
+          </div>
+        )}
+
+        <Button
+          onClick={handleAuth}
+          disabled={loading}
+          style={{
+            width: "100%",
+            marginTop: "1.5rem",
+            marginBottom: "1rem",
+            justifyContent: "center",
+          }}
+        >
+          {loading ? (
+            <span style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              <div className="loading-spinner" style={{ width: "1rem", height: "1rem" }} />
+              {mode === "login" ? "Signing in..." : "Creating account..."}
+            </span>
+          ) : mode === "login" ? (
+            "Sign In"
+          ) : (
+            "Create Account"
+          )}
+        </Button>
+
+        <div style={{ textAlign: "center" }}>
+          <p style={{ marginBottom: "1rem", color: "var(--text-secondary)" }}>
+            {mode === "login" ? "Don't have an account?" : "Already have an account?"}
+          </p>
+          <button
+            onClick={() => {
+              setMode(mode === "login" ? "register" : "login");
+              setError("");
+              setEmail("");
+              setPassword("");
+              setConfirmPassword("");
+            }}
+            style={{
+              background: "none",
+              border: "none",
+              color: "var(--primary-light)",
+              cursor: "pointer",
+              textDecoration: "underline",
+              fontSize: "1rem",
+              fontWeight: 600,
+            }}
+          >
+            {mode === "login" ? "Create one" : "Sign in"}
           </button>
         </div>
+      </Card>
 
-        {status && (
-          <div style={{
-            marginTop: "16px",
-            padding: "12px",
-            borderRadius: "8px",
-            background: status === "Success" ? "rgba(16, 185, 129, 0.1)" : "rgba(239, 68, 68, 0.1)",
-            color: status === "Success" ? "var(--success)" : "var(--error)",
-            textAlign: "center",
-            fontWeight: 600
-          }}>
-            {status}
-          </div>
-        )}
-
-        {token && (
-          <div className="card" style={{ marginTop: "16px", background: "var(--bg-secondary)" }}>
-            <div style={{ fontSize: "14px", color: "var(--success)", marginBottom: "8px", fontWeight: 600 }}>
-              Authenticated Successfully
-            </div>
-            <div style={{ fontSize: "13px", color: "var(--text-tertiary)" }}>
-              User ID: <code style={{ color: "var(--primary)" }}>{userId}</code>
-            </div>
-          </div>
-        )}
+      <div style={{ textAlign: "center", marginTop: "2rem" }}>
+        <p style={{ color: "var(--text-tertiary)", fontSize: "0.9rem" }}>
+          💡 Demo credentials: test@example.com / password123
+        </p>
       </div>
+
+      {success && <Toast message={success} type="success" onClose={() => setSuccess("")} />}
     </div>
   );
 }
