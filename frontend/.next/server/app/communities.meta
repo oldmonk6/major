@@ -1,0 +1,14 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/communities/layout,_N_T_/communities/page,_N_T_/communities"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/communities/__PAGE__",
+    "/communities",
+    "/_index"
+  ]
+}

@@ -26,7 +26,7 @@ export function Button({
       className={cn(baseClass, variantClass, sizeClass, className)}
       {...rest}
     >
-      {children}
+      <span className="button-label">{children}</span>
     </button>
   );
 }
@@ -81,9 +81,9 @@ export function Card({
   ...rest
 }: React.HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={cn('card', className)} {...rest}>
+    <article className={cn('card', className)} {...rest}>
       {children}
-    </div>
+    </article>
   );
 }
 
@@ -95,10 +95,11 @@ export function SectionHeader({
   subtitle?: string;
 }) {
   return (
-    <div style={{ marginBottom: '2rem' }}>
+    <header className="section-header" style={{ marginBottom: '2rem' }}>
+      <p className="section-kicker">Recovery Flow</p>
       <h1>{title}</h1>
-      {subtitle && <p>{subtitle}</p>}
-    </div>
+      {subtitle && <p className="section-subtitle">{subtitle}</p>}
+    </header>
   );
 }
 
@@ -167,11 +168,12 @@ export function Toast({
 }) {
   const bgColor =
     type === 'error'
-      ? 'rgba(239, 68, 68, 0.2)'
+      ? 'rgba(var(--error-rgb), 0.2)'
       : type === 'info'
-        ? 'rgba(59, 130, 246, 0.2)'
-        : 'rgba(16, 185, 129, 0.2)';
-  const textColor = type === 'error' ? '#ef4444' : type === 'info' ? '#3b82f6' : '#10b981';
+        ? 'rgba(var(--warning-rgb), 0.2)'
+        : 'rgba(var(--success-rgb), 0.2)';
+  const textColor =
+    type === 'error' ? 'var(--error)' : type === 'info' ? 'var(--warning)' : 'var(--success)';
 
   return (
     <div
@@ -283,36 +285,39 @@ export function Slider({
   onChange,
   min = 0,
   max = 10,
+  step = 1,
   label,
 }: {
   value: number;
   onChange: (value: number) => void;
   min?: number;
   max?: number;
+  step?: number;
   label?: string;
 }) {
+  const range = max - min || 1;
+  const percentage = ((value - min) / range) * 100;
+  const displayValue = step < 1 ? value.toFixed(1) : String(value);
+
   return (
-    <div style={{ marginBottom: '1.5rem' }}>
+    <div style={{ marginBottom: '1.75rem' }}>
       {label && <label className="label">{label}</label>}
       <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
         <input
+          className="smooth-slider"
           type="range"
           min={min}
           max={max}
+          step={step}
           value={value}
           onChange={(e) => onChange(Number(e.target.value))}
           style={{
             flex: 1,
-            height: '0.5rem',
-            borderRadius: '0.25rem',
-            outline: 'none',
-            background: 'var(--bg-tertiary)',
-            WebkitAppearance: 'none',
-            appearance: 'none',
+            background: `linear-gradient(90deg, var(--primary) 0 ${percentage}%, var(--bg-tertiary) ${percentage}% 100%)`,
           }}
         />
-        <span style={{ minWidth: '3rem', textAlign: 'right', fontWeight: 600 }}>
-          {value} / {max}
+        <span className="slider-value-pill">
+          {displayValue} / {max}
         </span>
       </div>
     </div>
@@ -331,8 +336,8 @@ export function Grid({
   className?: string;
 }) {
   return (
-    <div
-      className={cn(className)}
+    <section
+      className={cn('flow-grid', className)}
       style={{
         display: 'grid',
         gridTemplateColumns: `repeat(${cols}, 1fr)`,
@@ -340,6 +345,6 @@ export function Grid({
       }}
     >
       {children}
-    </div>
+    </section>
   );
 }

@@ -1,0 +1,23 @@
+{
+  "/_global-error/page": "app/_global-error/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
+  "/auth/page": "app/auth/page.js",
+  "/checkin/page": "app/checkin/page.js",
+  "/coach/page": "app/coach/page.js",
+  "/communities/[slug]/page": "app/communities/[slug]/page.js",
+  "/communities/page": "app/communities/page.js",
+  "/community/page": "app/community/page.js",
+  "/journal/page": "app/journal/page.js",
+  "/logout/page": "app/logout/page.js",
+  "/messages/page": "app/messages/page.js",
+  "/onboard/page": "app/onboard/page.js",
+  "/page": "app/page.js",
+  "/progress/page": "app/progress/page.js",
+  "/risk/page": "app/risk/page.js",
+  "/settings/profile/page": "app/settings/profile/page.js",
+  "/social/page": "app/social/page.js",
+  "/sos/page": "app/sos/page.js",
+  "/tasks/page": "app/tasks/page.js",
+  "/u/[userId]/page": "app/u/[userId]/page.js",
+  "/world/page": "app/world/page.js"
+}

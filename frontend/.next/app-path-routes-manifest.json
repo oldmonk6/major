@@ -1,0 +1,23 @@
+{
+  "/_global-error/page": "/_global-error",
+  "/_not-found/page": "/_not-found",
+  "/auth/page": "/auth",
+  "/checkin/page": "/checkin",
+  "/coach/page": "/coach",
+  "/communities/[slug]/page": "/communities/[slug]",
+  "/communities/page": "/communities",
+  "/community/page": "/community",
+  "/journal/page": "/journal",
+  "/logout/page": "/logout",
+  "/messages/page": "/messages",
+  "/onboard/page": "/onboard",
+  "/page": "/",
+  "/progress/page": "/progress",
+  "/risk/page": "/risk",
+  "/settings/profile/page": "/settings/profile",
+  "/social/page": "/social",
+  "/sos/page": "/sos",
+  "/tasks/page": "/tasks",
+  "/u/[userId]/page": "/u/[userId]",
+  "/world/page": "/world"
+}

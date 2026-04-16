@@ -10,6 +10,7 @@ from .auth import router as auth_router
 from .config import Settings, get_settings
 from .database import Base, engine
 from .routes import router
+from .social_platform import router as social_platform_router, socket_app
 from .storage import ensure_bucket
 
 from fastapi.middleware.cors import CORSMiddleware
@@ -41,6 +42,8 @@ async def health() -> Dict[str, str]:
 
 app.include_router(auth_router)
 app.include_router(router)
+app.include_router(social_platform_router)
+app.mount("/ws", socket_app)
 
 
 @app.get("/")

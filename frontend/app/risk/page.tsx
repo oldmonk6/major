@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { SectionHeader, Card, Button, Input, Slider, EmptyState, Toast } from "@/components/ui";
+import React, { useEffect, useState } from "react";
+
+import { Button, EmptyState, SectionHeader, Slider, Toast } from "@/components/ui";
 import { getAuthHeaders } from "@/lib/utils";
 
 const apiBase = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
@@ -47,7 +48,6 @@ export default function RiskPage() {
       const res = await fetch(`${apiBase}/risk`, {
         headers: getAuthHeaders(token),
       });
-
       if (!res.ok) throw new Error("Failed to assess risk");
 
       const data = await res.json();
@@ -79,7 +79,6 @@ export default function RiskPage() {
           time_of_day: new Date().toISOString(),
         }),
       });
-
       if (!res.ok) throw new Error("Failed to get intervention");
 
       const data = await res.json();
@@ -107,9 +106,7 @@ export default function RiskPage() {
           reward,
         }),
       });
-
       if (!res.ok) throw new Error("Failed to send feedback");
-
       setFeedbackSent(true);
       setTimeout(() => setFeedbackSent(false), 3000);
     } catch (err) {
@@ -129,14 +126,14 @@ export default function RiskPage() {
       case "high":
         return "var(--error)";
       default:
-        return "var(--primary-light)";
+        return "var(--primary)";
     }
   };
 
   if (!token) {
     return (
       <EmptyState
-        icon="⚠️"
+        icon="⚠"
         title="Sign In Required"
         description="Please sign in to assess your risk level"
         action={{ label: "Go to Sign In", onClick: () => (window.location.href = "/auth") }}
@@ -145,40 +142,37 @@ export default function RiskPage() {
   }
 
   return (
-    <div style={{ maxWidth: "700px", margin: "0 auto" }}>
-      <SectionHeader
-        title="Risk Assessment"
-        subtitle="Check your current risk level and get personalized intervention support"
-      />
+    <div className="app-page-shell">
+      <section className="app-page-intro">
+        <div className="app-page-intro-grid">
+          <div className="app-page-intro-copy">
+            <SectionHeader
+              title="Risk Assessment"
+              subtitle="The page should explain risk calmly, show what matters, and lead directly to a useful action."
+            />
+          </div>
+          <div className="app-page-intro-side">
+            <div className="app-page-chip-row">
+              <span className="app-page-chip">Signal-based support</span>
+              <span className="app-page-chip">Intervention on demand</span>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {!risk ? (
-        <Card>
-          <h2 style={{ marginBottom: "1rem" }}>Assess Your Risk Level</h2>
-          <p style={{ marginBottom: "1.5rem", color: "var(--text-secondary)" }}>
-            Understanding your current risk helps us provide targeted support and interventions
-            when you need them most.
+        <div className="app-panel soft">
+          <p className="landing-kicker">Assessment</p>
+          <h2 style={{ marginBottom: "0.75rem" }}>Check your current support level</h2>
+          <p style={{ marginBottom: "1rem" }}>
+            We use recent signals to estimate whether the next stretch of time looks steady, uncertain, or high-friction.
           </p>
-
           {error && (
-            <div
-              style={{
-                marginBottom: "1rem",
-                padding: "0.75rem",
-                background: "rgba(239, 68, 68, 0.2)",
-                border: "1px solid #ef4444",
-                borderRadius: "0.5rem",
-                color: "#ef4444",
-              }}
-            >
-              {error}
+            <div className="app-panel critical" style={{ marginBottom: "1rem" }}>
+              <p style={{ margin: 0, color: "var(--error)" }}>{error}</p>
             </div>
           )}
-
-          <Button
-            onClick={assessRisk}
-            disabled={loading}
-            style={{ width: "100%", justifyContent: "center" }}
-          >
+          <Button onClick={assessRisk} disabled={loading} style={{ width: "100%", justifyContent: "center" }}>
             {loading ? (
               <span style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                 <div className="loading-spinner" style={{ width: "1rem", height: "1rem" }} />
@@ -188,154 +182,85 @@ export default function RiskPage() {
               "Assess My Risk"
             )}
           </Button>
-        </Card>
+        </div>
       ) : (
         <>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: "1rem",
-              marginBottom: "2rem",
-            }}
-          >
-            <Card>
-              <div style={{ textAlign: "center" }}>
-                <p style={{ color: "var(--text-tertiary)", fontSize: "0.9rem", margin: "0 0 0.5rem 0" }}>
-                  Risk Score
-                </p>
-                <div
-                  style={{
-                    fontSize: "3rem",
-                    fontWeight: 700,
-                    background: `linear-gradient(135deg, ${getRiskColor(risk.bucket)} 0%, ${getRiskColor(risk.bucket)} 100%)`,
-                    WebkitBackgroundClip: "text",
-                    WebkitTextFillColor: "transparent",
-                  }}
-                >
-                  {risk.score}
-                </div>
+          <section className="app-stat-grid">
+            <div className="app-stat-card">
+              <p className="app-stat-kicker">Risk Score</p>
+              <div className="app-stat-value" style={{ color: getRiskColor(risk.bucket) }}>
+                {risk.score}
               </div>
-            </Card>
+              <p className="app-stat-note">Current numerical estimate</p>
+            </div>
+            <div className="app-stat-card">
+              <p className="app-stat-kicker">Risk Level</p>
+              <div className="app-stat-value" style={{ color: getRiskColor(risk.bucket), textTransform: "uppercase" }}>
+                {risk.bucket}
+              </div>
+              <p className="app-stat-note">Support intensity right now</p>
+            </div>
+            <div className="app-stat-card">
+              <p className="app-stat-kicker">Next Move</p>
+              <div className="app-stat-value" style={{ fontSize: "1.8rem", color: "var(--text-primary)" }}>
+                {jit ? "Action ready" : "Get support"}
+              </div>
+              <p className="app-stat-note">Use an intervention matched to this moment</p>
+            </div>
+          </section>
 
-            <Card>
-              <div style={{ textAlign: "center" }}>
-                <p style={{ color: "var(--text-tertiary)", fontSize: "0.9rem", margin: "0 0 0.5rem 0" }}>
-                  Risk Level
-                </p>
-                <div
-                  style={{
-                    fontSize: "2rem",
-                    fontWeight: 700,
-                    color: getRiskColor(risk.bucket),
-                    textTransform: "uppercase",
-                    letterSpacing: "0.05em",
-                  }}
-                >
-                  {risk.bucket}
-                </div>
-              </div>
-            </Card>
+          <div className="app-panel">
+            <p className="landing-kicker">Why this level</p>
+            <p style={{ margin: 0 }}>{risk.rationale}</p>
           </div>
 
-          <Card style={{ borderLeft: "4px solid var(--primary-light)", marginBottom: "2rem" }}>
-            <h3 style={{ marginBottom: "0.75rem" }}>Why This Risk Level?</h3>
-            <p style={{ color: "var(--text-secondary)", margin: 0 }}>{risk.rationale}</p>
-          </Card>
-
           {!jit ? (
-            <Card>
-              <h2 style={{ marginBottom: "1rem" }}>Get Support</h2>
-              <p style={{ marginBottom: "1.5rem", color: "var(--text-secondary)" }}>
-                We can provide a personalized intervention to help you manage this moment.
+            <div className="app-panel soft">
+              <p className="landing-kicker">Intervention</p>
+              <h3 style={{ marginBottom: "0.6rem" }}>Get a guided next step</h3>
+              <p style={{ marginBottom: "1rem" }}>
+                When the page identifies a harder window, the next action should feel immediate and practical.
               </p>
-              <Button
-                onClick={getIntervention}
-                disabled={loading}
-                style={{ width: "100%", justifyContent: "center" }}
-              >
+              <Button onClick={getIntervention} disabled={loading} style={{ width: "100%", justifyContent: "center" }}>
                 {loading ? (
                   <span style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                     <div className="loading-spinner" style={{ width: "1rem", height: "1rem" }} />
-                    Finding Intervention...
+                    Finding intervention...
                   </span>
                 ) : (
                   "Get Intervention"
                 )}
               </Button>
-            </Card>
+            </div>
           ) : (
-            <>
-              <Card
-                style={{
-                  borderLeft: "4px solid var(--success)",
-                  marginBottom: "1.5rem",
-                }}
-              >
-                <h2 style={{ marginBottom: "1rem", color: "var(--success)" }}>
-                  ✓ Recommended Action
-                </h2>
-                <div style={{ marginBottom: "1.5rem" }}>
-                  <p style={{ color: "var(--text-tertiary)", fontSize: "0.9rem", margin: "0 0 0.5rem 0" }}>
-                    Action
-                  </p>
-                  <h3 style={{ margin: 0, color: "var(--primary-light)" }}>
-                    {jit.chosen_action}
-                  </h3>
+            <section className="app-grid-2">
+              <div className="app-panel success">
+                <p className="landing-kicker">Recommended Action</p>
+                <h3 style={{ marginBottom: "0.65rem", color: "var(--success)" }}>{jit.chosen_action}</h3>
+                <p style={{ marginBottom: "0.9rem" }}>{jit.instructions}</p>
+                <div className="app-panel" style={{ marginTop: "0.8rem" }}>
+                  <p className="app-stat-kicker">Why this helps</p>
+                  <p style={{ margin: "0.35rem 0 0 0" }}>{jit.why}</p>
                 </div>
+              </div>
 
-                <div style={{ marginBottom: "1.5rem" }}>
-                  <p style={{ color: "var(--text-tertiary)", fontSize: "0.9rem", margin: "0 0 0.5rem 0" }}>
-                    Instructions
-                  </p>
-                  <p style={{ margin: 0, color: "var(--text-secondary)", lineHeight: "1.6" }}>
-                    {jit.instructions}
-                  </p>
-                </div>
-
-                <div
-                  style={{
-                    padding: "1rem",
-                    background: "var(--bg-tertiary)",
-                    borderRadius: "0.5rem",
-                  }}
-                >
-                  <p style={{ color: "var(--text-tertiary)", fontSize: "0.9rem", margin: "0 0 0.5rem 0" }}>
-                    Why This Helps
-                  </p>
-                  <p style={{ margin: 0, color: "var(--text-secondary)" }}>{jit.why}</p>
-                </div>
-              </Card>
-
-              <Card>
-                <h2 style={{ marginBottom: "1rem" }}>How Helpful Was This?</h2>
-                <p style={{ marginBottom: "1.5rem", color: "var(--text-secondary)" }}>
-                  Your feedback helps us improve future interventions.
-                </p>
-
+              <div className="app-panel">
+                <p className="landing-kicker">Feedback</p>
+                <h3 style={{ marginBottom: "0.55rem" }}>How helpful was that?</h3>
+                <p style={{ marginBottom: "1rem" }}>Your rating helps future interventions become more relevant.</p>
                 <Slider
                   value={reward}
                   onChange={setReward}
                   min={0}
                   max={1}
-                  label="Rate helpfulness (0 = not helpful, 1 = very helpful)"
+                  step={0.1}
+                  label="0 means not helpful, 1 means very helpful"
                 />
-
                 {error && (
-                  <div
-                    style={{
-                      marginBottom: "1rem",
-                      padding: "0.75rem",
-                      background: "rgba(239, 68, 68, 0.2)",
-                      border: "1px solid #ef4444",
-                      borderRadius: "0.5rem",
-                      color: "#ef4444",
-                    }}
-                  >
-                    {error}
+                  <div className="app-panel critical" style={{ marginBottom: "1rem" }}>
+                    <p style={{ margin: 0, color: "var(--error)" }}>{error}</p>
                   </div>
                 )}
-
                 <Button
                   onClick={sendFeedback}
                   disabled={feedbackLoading}
@@ -350,29 +275,30 @@ export default function RiskPage() {
                     "Submit Feedback"
                   )}
                 </Button>
-
-                {feedbackSent && (
-                  <Toast
-                    message="Thank you for the feedback! It helps us improve."
-                    type="success"
-                    onClose={() => setFeedbackSent(false)}
-                  />
-                )}
-              </Card>
-
-              <Button
-                onClick={() => {
-                  setRisk(null);
-                  setJit(null);
-                }}
-                variant="secondary"
-                style={{ width: "100%", marginTop: "1rem" }}
-              >
-                ← Assess Again
-              </Button>
-            </>
+              </div>
+            </section>
           )}
+
+          <Button
+            onClick={() => {
+              setRisk(null);
+              setJit(null);
+              setError("");
+            }}
+            variant="secondary"
+            style={{ width: "100%", justifyContent: "center" }}
+          >
+            Assess Again
+          </Button>
         </>
+      )}
+
+      {feedbackSent && (
+        <Toast
+          message="Thank you for the feedback. It will improve future interventions."
+          type="success"
+          onClose={() => setFeedbackSent(false)}
+        />
       )}
     </div>
   );

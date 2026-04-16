@@ -1,267 +1,262 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { SectionHeader, Card, Button, Textarea, Toast } from "@/components/ui";
+
+import { Button, EmptyState, SectionHeader, Toast } from "@/components/ui";
 import { getAuthHeaders } from "@/lib/utils";
 
 const apiBase = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 
-const resources = [
-  {
-    name: "988 Suicide & Crisis Lifeline",
-    number: "988",
-    description: "Call or text for immediate support (US)",
-    available: "24/7",
-  },
-  {
-    name: "Crisis Text Line",
-    number: "Text HOME to 741741",
-    description: "Text-based crisis support",
-    available: "24/7",
-  },
-  {
-    name: "SAMHSA National Helpline",
-    number: "1-800-662-4357",
-    description: "Treatment referrals and information",
-    available: "24/7",
-  },
-];
+type EmergencyPlan = {
+  triggers: string[];
+  danger_hours: string[];
+  safe_places: string[];
+  replacement_actions: string[];
+  reasons_to_quit: string[];
+};
+
+type SupportCircle = {
+  members: Array<{
+    id: string;
+    name: string;
+    relationship_label?: string | null;
+    contact?: string | null;
+  }>;
+};
 
 export default function SOSPage() {
   const [token, setToken] = useState("");
-  const [message, setMessage] = useState("");
+  const [plan, setPlan] = useState<EmergencyPlan | null>(null);
+  const [support, setSupport] = useState<SupportCircle>({ members: [] });
+  const [message, setMessage] = useState("I am struggling right now and need someone to reach out.");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
   useEffect(() => {
     const stored = localStorage.getItem("reclaim_token");
     if (stored) setToken(stored);
   }, []);
 
-  const sendAlert = async () => {
-    if (!token) {
-      setError("Please sign in first");
-      return;
-    }
+  useEffect(() => {
+    if (!token) return;
+    void loadData(token);
+  }, [token]);
 
-    setError("");
-    setLoading(true);
+  const displayDangerHours = plan?.danger_hours?.length ? plan.danger_hours : ["Late night", "After conflict", "During isolation"];
+  const displaySafePlaces = plan?.safe_places?.length ? plan.safe_places : ["Step outside", "Go to a public place", "Move toward another person"];
+  const displayTriggers = plan?.triggers?.length ? plan.triggers : ["Stress spike", "Loneliness", "Unstructured downtime"];
+  const displayReasons = plan?.reasons_to_quit?.length ? plan.reasons_to_quit : ["Protect tomorrow", "Stay honest with yourself", "Keep momentum alive"];
+  const displayActions = plan?.replacement_actions?.length
+    ? plan.replacement_actions
+    : ["Drink water and walk for 10 minutes.", "Call or text one trusted person.", "Move to a safer environment immediately."];
 
+  async function loadData(activeToken: string) {
     try {
-      const res = await fetch(`${apiBase}/sos/alert`, {
-        method: "POST",
-        headers: getAuthHeaders(token),
-        body: JSON.stringify({
-          type: "sos",
-          message: message.trim() || "I need support right now",
-        }),
-      });
-
-      if (!res.ok) throw new Error("Failed to send alert");
-
-      const data = await res.json();
-      setSuccess(
-        "Alert sent! Your support network has been notified. You're not alone."
-      );
-
-      // Reset form
-      setTimeout(() => {
-        setMessage("");
-        setSuccess("");
-      }, 3000);
+      const [planRes, supportRes] = await Promise.all([
+        fetch(`${apiBase}/emergency-plan`, { headers: getAuthHeaders(activeToken) }),
+        fetch(`${apiBase}/support-circle`, { headers: getAuthHeaders(activeToken) }),
+      ]);
+      const planData = await planRes.json();
+      const supportData = await supportRes.json();
+      if (planRes.ok) setPlan(planData.plan);
+      if (supportRes.ok) setSupport(supportData);
     } catch (err) {
-      setError("Failed to send alert. Please try again or call for immediate help.");
       console.error(err);
+    }
+  }
+
+  async function sendAlert() {
+    if (!token) return;
+    setLoading(true);
+    try {
+      const [supportAlertRes, sosRes] = await Promise.all([
+        fetch(`${apiBase}/support-circle/alert`, {
+          method: "POST",
+          headers: getAuthHeaders(token),
+          body: JSON.stringify({ message }),
+        }),
+        fetch(`${apiBase}/sos/alert`, {
+          method: "POST",
+          headers: getAuthHeaders(token),
+          body: JSON.stringify({ type: "sos", message }),
+        }),
+      ]);
+
+      if (!supportAlertRes.ok || !sosRes.ok) throw new Error("Failed to send alert");
+      setToast({ message: "Rescue alert recorded. Use the steps below right now.", type: "success" });
+    } catch (err) {
+      console.error(err);
+      setToast({ message: "Failed to send rescue alert.", type: "error" });
     } finally {
       setLoading(false);
     }
-  };
+  }
+
+  if (!token) {
+    return (
+      <EmptyState
+        icon="🆘"
+        title="Sign In Required"
+        description="Please sign in to access SOS support."
+        action={{ label: "Go to Sign In", onClick: () => (window.location.href = "/auth") }}
+      />
+    );
+  }
 
   return (
-    <div>
-      {/* Emergency Header */}
-      <Card
-        style={{
-          borderLeft: "4px solid var(--error)",
-          background: "linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, transparent 100%)",
-          marginBottom: "2rem",
-        }}
-      >
-        <h1 style={{ color: "var(--error)", marginBottom: "0.5rem" }}>
-          Crisis Support is Available
-        </h1>
-        <p style={{ fontSize: "1.1rem", lineHeight: "1.6", color: "var(--text-secondary)", margin: 0 }}>
-          You are not alone. If you're in crisis, help is available right now, 24/7.
-        </p>
-      </Card>
+    <div className="recovery-shell">
+      <section className="recovery-intro">
+        <div>
+          <SectionHeader
+            title="SOS Rescue Flow"
+            subtitle="Reduce choices. Stabilize the next ten minutes. Pull in support quickly."
+          />
+        </div>
+        <div className="recovery-risk-badge critical">
+          <span>Emergency mode</span>
+          <strong>Active</strong>
+        </div>
+      </section>
 
-      {/* Primary Emergency Resource */}
-      <Card
-        style={{
-          borderLeft: "4px solid var(--error)",
-          background: "var(--bg-secondary)",
-          marginBottom: "2rem",
-          padding: "2rem",
-          textAlign: "center",
-        }}
-      >
-        <p
-          style={{
-            fontSize: "0.9rem",
-            color: "var(--text-tertiary)",
-            margin: "0 0 1rem 0",
-            textTransform: "uppercase",
-            letterSpacing: "0.05em",
-          }}
-        >
-          Immediate Assistance
-        </p>
-        <h2
-          style={{
-            fontSize: "4rem",
-            fontWeight: 800,
-            color: "var(--error)",
-            margin: "0 0 1rem 0",
-          }}
-        >
-          988
-        </h2>
-        <h3 style={{ marginBottom: "0.5rem", color: "var(--text-primary)" }}>
-          Suicide & Crisis Lifeline
-        </h3>
-        <p style={{ color: "var(--text-secondary)", marginBottom: "1rem" }}>
-          Call or text 988 anytime, day or night. Trained counselors are standing by.
-        </p>
-        <p style={{ color: "var(--text-tertiary)", fontSize: "0.95rem", margin: 0 }}>
-          Free • Confidential • 24/7
-        </p>
-      </Card>
-
-      {/* Alert Network */}
-      <Card style={{ marginBottom: "2rem" }}>
-        <h2 style={{ marginBottom: "1rem" }}>Alert Your Support Network</h2>
-        <p style={{ color: "var(--text-secondary)", marginBottom: "1.5rem" }}>
-          Send an alert to your trusted contacts to let them know you need support right now.
-        </p>
-
-        <label className="label">Your Message (Optional)</label>
-        <Textarea
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          placeholder="I'm struggling right now and need someone to talk to. Please reach out to me."
-          rows={4}
-        />
-
-        {error && (
-          <div
-            style={{
-              marginTop: "1rem",
-              marginBottom: "1rem",
-              padding: "0.75rem",
-              background: "rgba(239, 68, 68, 0.2)",
-              border: "1px solid #ef4444",
-              borderRadius: "0.5rem",
-              color: "#ef4444",
-            }}
-          >
-            {error}
+      <section className="recovery-grid-main">
+        <div className="recovery-section-block rescue-surface">
+          <div className="recovery-section-head">
+            <div>
+              <p className="journey-kicker">Immediate actions</p>
+              <h3>Do these now, in order.</h3>
+            </div>
+            <p>No long reading. Just move.</p>
           </div>
-        )}
 
-        <Button
-          onClick={sendAlert}
-          disabled={loading}
-          style={{
-            width: "100%",
-            background: "linear-gradient(135deg, var(--error) 0%, #dc2626 100%)",
-            justifyContent: "center",
-            marginTop: "1rem",
-          }}
-        >
-          {loading ? (
-            <span style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-              <div className="loading-spinner" style={{ width: "1rem", height: "1rem" }} />
-              Sending Alert...
-            </span>
-          ) : (
-            "Send Crisis Alert"
+          <div className="rescue-step-list">
+            <div>
+              <strong>1</strong>
+              <span>Leave the current environment or put distance between you and the trigger.</span>
+            </div>
+            <div>
+              <strong>2</strong>
+              <span>Drink water and take ten slow breaths.</span>
+            </div>
+            <div>
+              <strong>3</strong>
+              <span>Message one safe person before you make another decision.</span>
+            </div>
+            <div>
+              <strong>4</strong>
+              <span>Use one replacement action from your plan below.</span>
+            </div>
+          </div>
+
+          <label className="label" style={{ marginTop: "1.2rem" }}>
+            Alert message
+          </label>
+          <textarea
+            className="textarea"
+            rows={4}
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+          />
+
+          <div className="recovery-action-row">
+            <Button onClick={sendAlert} disabled={loading}>
+              {loading ? "Sending..." : "Send Rescue Alert"}
+            </Button>
+            <a href="tel:988" className="landing-secondary-link">
+              Call 988
+            </a>
+          </div>
+        </div>
+
+        <aside className="recovery-sidebar">
+          <div className="recovery-risk-panel critical">
+            <p className="journey-kicker">Support circle</p>
+            <h3>{support.members.length} active contact{support.members.length === 1 ? "" : "s"}</h3>
+            <p>The alert will reference the support circle stored in your recovery dashboard.</p>
+          </div>
+
+          <div className="recovery-intervention-panel">
+            <p className="journey-kicker">24/7 lines</p>
+            <div className="recovery-intervention-list">
+              <div>988 Suicide & Crisis Lifeline</div>
+              <div>Text HOME to 741741</div>
+              <div>SAMHSA: 1-800-662-4357</div>
+            </div>
+          </div>
+        </aside>
+      </section>
+
+      <section className="recovery-grid-secondary">
+        <div className="recovery-section-block">
+          <div className="recovery-section-head">
+            <div>
+              <p className="journey-kicker">Your Emergency Plan</p>
+              <h3>Use what you already prepared.</h3>
+            </div>
+            <p>Keep it visible in the hard window. If the plan is still empty, use the defaults below and fill it in later.</p>
+          </div>
+          <div className="recovery-pattern-grid">
+            <div>
+              <span>Danger hours</span>
+              <strong>{displayDangerHours.join(", ")}</strong>
+            </div>
+            <div>
+              <span>Safe places</span>
+              <strong>{displaySafePlaces.join(", ")}</strong>
+            </div>
+            <div>
+              <span>Top triggers</span>
+              <strong>{displayTriggers.join(", ")}</strong>
+            </div>
+            <div>
+              <span>Reasons to quit</span>
+              <strong>{displayReasons.join(", ")}</strong>
+            </div>
+          </div>
+          <div className="recovery-mini-log rescue-fallback-list">
+            {displayActions.slice(0, 4).map((item) => (
+              <p key={item}>{item}</p>
+            ))}
+          </div>
+          {(!plan?.replacement_actions || plan.replacement_actions.length === 0) && (
+            <div className="recovery-action-row">
+              <a href="/progress" className="landing-secondary-link">
+                Finish Your Recovery Plan
+              </a>
+            </div>
           )}
-        </Button>
-      </Card>
-
-      {/* Other Resources */}
-      <div style={{ marginBottom: "2rem" }}>
-        <h2 style={{ marginBottom: "1.5rem" }}>Other Resources</h2>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-            gap: "1rem",
-          }}
-        >
-          {resources.map((resource, idx) => (
-            <Card key={idx} style={{ borderLeft: "4px solid var(--primary-light)" }}>
-              <h3 style={{ marginBottom: "0.5rem" }}>{resource.name}</h3>
-              <p
-                style={{
-                  fontSize: "1.25rem",
-                  fontWeight: 700,
-                  color: "var(--primary-light)",
-                  margin: "0.5rem 0",
-                }}
-              >
-                {resource.number}
-              </p>
-              <p style={{ color: "var(--text-secondary)", fontSize: "0.95rem", margin: "0.5rem 0" }}>
-                {resource.description}
-              </p>
-              <p style={{ color: "var(--text-tertiary)", fontSize: "0.85rem", margin: 0 }}>
-                {resource.available}
-              </p>
-            </Card>
-          ))}
         </div>
-      </div>
 
-      {/* Self-Care Tips */}
-      <Card style={{ background: "var(--bg-secondary)" }}>
-        <h2 style={{ marginBottom: "1.5rem" }}>In This Moment</h2>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-            gap: "1rem",
-          }}
-        >
-          <div>
-            <h4 style={{ marginBottom: "0.5rem", color: "var(--primary-light)" }}>Ground Yourself</h4>
-            <p style={{ color: "var(--text-secondary)", margin: 0, fontSize: "0.95rem" }}>
-              Notice 5 things you see, 4 you can touch, 3 you hear, 2 you smell, 1 you taste.
-            </p>
+        <div className="recovery-section-block">
+          <div className="recovery-section-head">
+            <div>
+              <p className="journey-kicker">People to Contact</p>
+              <h3>Use one human connection before the spiral gets louder.</h3>
+            </div>
+            <p>Small circle. Fast reach-out.</p>
           </div>
-          <div>
-            <h4 style={{ marginBottom: "0.5rem", color: "var(--primary-light)" }}>Breathe Deeply</h4>
-            <p style={{ color: "var(--text-secondary)", margin: 0, fontSize: "0.95rem" }}>
-              Breathe in for 4 counts, hold for 4, exhale for 4. Repeat 5 times.
-            </p>
-          </div>
-          <div>
-            <h4 style={{ marginBottom: "0.5rem", color: "var(--primary-light)" }}>Move Your Body</h4>
-            <p style={{ color: "var(--text-secondary)", margin: 0, fontSize: "0.95rem" }}>
-              Take a walk, stretch, or do any movement that helps you feel present.
-            </p>
-          </div>
-          <div>
-            <h4 style={{ marginBottom: "0.5rem", color: "var(--primary-light)" }}>Reach Out</h4>
-            <p style={{ color: "var(--text-secondary)", margin: 0, fontSize: "0.95rem" }}>
-              Call a friend, family member, or crisis line. Connection helps.
-            </p>
+          <div className="recovery-support-list">
+            {support.members.length === 0 ? (
+              <div className="rescue-empty-contacts">
+                <p>No support contacts are saved yet.</p>
+                <p>Add one trusted person in Recovery so SOS can alert someone fast.</p>
+                <a href="/progress" className="landing-secondary-link">
+                  Add People In Recovery
+                </a>
+              </div>
+            ) : (
+              support.members.map((member) => (
+                <div key={member.id} className="recovery-log-row">
+                  <strong>{member.name}</strong>
+                  <span>{member.relationship_label || "Support contact"}</span>
+                  <span>{member.contact || "No contact saved"}</span>
+                </div>
+              ))
+            )}
           </div>
         </div>
-      </Card>
+      </section>
 
-      {success && <Toast message={success} type="success" onClose={() => setSuccess("")} />}
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
     </div>
   );
 }

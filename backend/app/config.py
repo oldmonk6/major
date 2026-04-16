@@ -5,7 +5,9 @@ class Settings(BaseSettings):
     openai_api_key: str
     openai_model: str = "gpt-4o-mini"
     gemini_api_key: str
-    gemini_model: str = "gemini-1.5-flash"
+    gemini_model: str = "gemini-2.5-flash"
+    gemini_timeout_seconds: int = 25
+    gemini_disable_thinking: bool = True
     postgres_dsn: str
     redis_url: str
     s3_endpoint_url: str

@@ -29,4 +29,9 @@ async def get_current_user(
 
 def get_llm():
     settings = get_settings()
-    return LLMClient(api_key=settings.gemini_api_key, model=settings.gemini_model)
+    return LLMClient(
+        api_key=settings.gemini_api_key,
+        model=settings.gemini_model,
+        timeout_seconds=settings.gemini_timeout_seconds,
+        disable_thinking=settings.gemini_disable_thinking,
+    )

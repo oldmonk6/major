@@ -118,8 +118,7 @@ export default function OnboardPage() {
                 style={{
                   width: `${progress}%`,
                   height: "100%",
-                  background:
-                    "linear-gradient(90deg, var(--primary) 0%, var(--primary-light) 100%)",
+                  background: "var(--primary)",
                   transition: "width 0.3s ease",
                 }}
               />
@@ -244,7 +243,7 @@ export default function OnboardPage() {
                       <div
                         key={idx}
                         style={{
-                          background: "rgba(16, 185, 129, 0.2)",
+                          background: "rgba(var(--success-rgb), 0.2)",
                           color: "var(--success)",
                           padding: "0.5rem 1rem",
                           borderRadius: "1rem",
@@ -336,10 +335,10 @@ export default function OnboardPage() {
                 style={{
                   marginTop: "1rem",
                   padding: "0.75rem",
-                  background: "rgba(239, 68, 68, 0.2)",
-                  border: "1px solid #ef4444",
+                  background: "rgba(var(--error-rgb), 0.2)",
+                  border: "1px solid var(--error)",
                   borderRadius: "0.5rem",
-                  color: "#ef4444",
+                  color: "var(--error)",
                 }}
               >
                 {error}

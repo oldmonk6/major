@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from sqlalchemy import JSON, String, Integer, DateTime, ForeignKey, Text, Float
+from sqlalchemy import JSON, String, Integer, DateTime, ForeignKey, Text, Float, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from pgvector.sqlalchemy import Vector
 
@@ -23,6 +23,19 @@ class User(Base):
 
     plans: Mapped[List["Plan"]] = relationship(back_populates="user")
     coach_sessions: Mapped[List["CoachSession"]] = relationship(back_populates="user")
+    emergency_plans: Mapped[List["EmergencyPlan"]] = relationship(back_populates="user")
+    support_circle_members: Mapped[List["SupportCircleMember"]] = relationship(back_populates="user")
+    slip_events: Mapped[List["SlipEvent"]] = relationship(back_populates="user")
+    craving_logs: Mapped[List["CravingLog"]] = relationship(back_populates="user")
+    community_groups_created: Mapped[List["CommunityGroup"]] = relationship(back_populates="creator")
+    community_messages_sent: Mapped[List["CommunityMessage"]] = relationship(
+        back_populates="sender",
+        foreign_keys="CommunityMessage.sender_id",
+    )
+    community_messages_received: Mapped[List["CommunityMessage"]] = relationship(
+        back_populates="recipient",
+        foreign_keys="CommunityMessage.recipient_id",
+    )
 
 
 class Plan(Base):
@@ -62,6 +75,262 @@ class Checkin(Base):
     triggers: Mapped[List[str]] = mapped_column(JSON)
     urge: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     ts: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class CravingLog(Base):
+    __tablename__ = "craving_logs"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=uuid4_str)
+    user_id: Mapped[str] = mapped_column(String, ForeignKey("users.id"))
+    intensity: Mapped[int] = mapped_column(Integer)
+    mood: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    trigger: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    location: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    action_taken: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    ts: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    user: Mapped["User"] = relationship(back_populates="craving_logs")
+
+
+class SlipEvent(Base):
+    __tablename__ = "slip_events"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=uuid4_str)
+    user_id: Mapped[str] = mapped_column(String, ForeignKey("users.id"))
+    trigger: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    happened_before: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    safe_action: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    next_hour_plan: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    next_day_plan: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    ts: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    user: Mapped["User"] = relationship(back_populates="slip_events")
+
+
+class EmergencyPlan(Base):
+    __tablename__ = "emergency_plans"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=uuid4_str)
+    user_id: Mapped[str] = mapped_column(String, ForeignKey("users.id"))
+    triggers: Mapped[List[str]] = mapped_column(JSON, default=list)
+    danger_hours: Mapped[List[str]] = mapped_column(JSON, default=list)
+    contacts: Mapped[List[Dict[str, Any]]] = mapped_column(JSON, default=list)
+    safe_places: Mapped[List[str]] = mapped_column(JSON, default=list)
+    replacement_actions: Mapped[List[str]] = mapped_column(JSON, default=list)
+    reasons_to_quit: Mapped[List[str]] = mapped_column(JSON, default=list)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user: Mapped["User"] = relationship(back_populates="emergency_plans")
+
+
+class SupportCircleMember(Base):
+    __tablename__ = "support_circle_members"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=uuid4_str)
+    user_id: Mapped[str] = mapped_column(String, ForeignKey("users.id"))
+    name: Mapped[str] = mapped_column(String)
+    relationship_label: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    contact: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    status: Mapped[str] = mapped_column(String, default="active")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    user: Mapped["User"] = relationship(back_populates="support_circle_members")
+
+
+class UserFollow(Base):
+    __tablename__ = "user_follows"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=uuid4_str)
+    follower_id: Mapped[str] = mapped_column(String, ForeignKey("users.id"))
+    following_id: Mapped[str] = mapped_column(String, ForeignKey("users.id"))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class UserProfile(Base):
+    __tablename__ = "user_profiles"
+
+    user_id: Mapped[str] = mapped_column(String, ForeignKey("users.id"), primary_key=True)
+    username: Mapped[str] = mapped_column(String, unique=True)
+    display_name: Mapped[str] = mapped_column(String)
+    bio: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    avatar_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    banner_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class SocialCommunity(Base):
+    __tablename__ = "social_communities"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=uuid4_str)
+    slug: Mapped[str] = mapped_column(String, unique=True)
+    name: Mapped[str] = mapped_column(String)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    avatar_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    banner_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    owner_id: Mapped[str] = mapped_column(String, ForeignKey("users.id"))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class SocialCommunityMember(Base):
+    __tablename__ = "social_community_members"
+    __table_args__ = (
+        UniqueConstraint("community_id", "user_id", name="uq_social_community_member"),
+    )
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=uuid4_str)
+    community_id: Mapped[str] = mapped_column(String, ForeignKey("social_communities.id"))
+    user_id: Mapped[str] = mapped_column(String, ForeignKey("users.id"))
+    role: Mapped[str] = mapped_column(String, default="member")
+    joined_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class SocialConversation(Base):
+    __tablename__ = "social_conversations"
+    __table_args__ = (
+        UniqueConstraint("user_a_id", "user_b_id", name="uq_social_conversation_pair"),
+    )
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=uuid4_str)
+    user_a_id: Mapped[str] = mapped_column(String, ForeignKey("users.id"))
+    user_b_id: Mapped[str] = mapped_column(String, ForeignKey("users.id"))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class SocialConversationMessage(Base):
+    __tablename__ = "social_conversation_messages"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=uuid4_str)
+    conversation_id: Mapped[str] = mapped_column(String, ForeignKey("social_conversations.id"))
+    sender_id: Mapped[str] = mapped_column(String, ForeignKey("users.id"))
+    content: Mapped[str] = mapped_column(Text)
+    image_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class SocialConversationReadState(Base):
+    __tablename__ = "social_conversation_read_states"
+    __table_args__ = (
+        UniqueConstraint("conversation_id", "user_id", name="uq_social_conversation_read_state"),
+    )
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=uuid4_str)
+    conversation_id: Mapped[str] = mapped_column(String, ForeignKey("social_conversations.id"))
+    user_id: Mapped[str] = mapped_column(String, ForeignKey("users.id"))
+    last_read_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class SocialCommunityMessage(Base):
+    __tablename__ = "social_community_messages"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=uuid4_str)
+    community_id: Mapped[str] = mapped_column(String, ForeignKey("social_communities.id"))
+    sender_id: Mapped[str] = mapped_column(String, ForeignKey("users.id"))
+    content: Mapped[str] = mapped_column(Text)
+    image_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class CommunityGroup(Base):
+    __tablename__ = "community_groups"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=uuid4_str)
+    name: Mapped[str] = mapped_column(String)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    created_by: Mapped[str] = mapped_column(String, ForeignKey("users.id"))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    creator: Mapped["User"] = relationship(back_populates="community_groups_created")
+    members: Mapped[List["CommunityGroupMember"]] = relationship(
+        back_populates="group",
+        cascade="all, delete-orphan",
+    )
+    messages: Mapped[List["CommunityMessage"]] = relationship(back_populates="group")
+
+
+class CommunityGroupMember(Base):
+    __tablename__ = "community_group_members"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=uuid4_str)
+    group_id: Mapped[str] = mapped_column(String, ForeignKey("community_groups.id"))
+    user_id: Mapped[str] = mapped_column(String, ForeignKey("users.id"))
+    role: Mapped[str] = mapped_column(String, default="member")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    group: Mapped["CommunityGroup"] = relationship(back_populates="members")
+
+
+class CommunityMessage(Base):
+    __tablename__ = "community_messages"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=uuid4_str)
+    sender_id: Mapped[str] = mapped_column(String, ForeignKey("users.id"))
+    recipient_id: Mapped[Optional[str]] = mapped_column(String, ForeignKey("users.id"), nullable=True)
+    group_id: Mapped[Optional[str]] = mapped_column(String, ForeignKey("community_groups.id"), nullable=True)
+    body: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    sender: Mapped["User"] = relationship(
+        back_populates="community_messages_sent",
+        foreign_keys=[sender_id],
+    )
+    recipient: Mapped[Optional["User"]] = relationship(
+        back_populates="community_messages_received",
+        foreign_keys=[recipient_id],
+    )
+    group: Mapped[Optional["CommunityGroup"]] = relationship(back_populates="messages")
+
+
+class SocialFriendRequest(Base):
+    __tablename__ = "social_friend_requests"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=uuid4_str)
+    requester_id: Mapped[str] = mapped_column(String, ForeignKey("users.id"))
+    addressee_id: Mapped[str] = mapped_column(String, ForeignKey("users.id"))
+    status: Mapped[str] = mapped_column(String, default="pending")  # pending | accepted | rejected
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    responded_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
+
+class SocialFriendship(Base):
+    __tablename__ = "social_friendships"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=uuid4_str)
+    user_a_id: Mapped[str] = mapped_column(String, ForeignKey("users.id"))
+    user_b_id: Mapped[str] = mapped_column(String, ForeignKey("users.id"))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class SocialChat(Base):
+    __tablename__ = "social_chats"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=uuid4_str)
+    kind: Mapped[str] = mapped_column(String, default="direct")  # direct | group
+    title: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    created_by: Mapped[str] = mapped_column(String, ForeignKey("users.id"))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class SocialChatMember(Base):
+    __tablename__ = "social_chat_members"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=uuid4_str)
+    chat_id: Mapped[str] = mapped_column(String, ForeignKey("social_chats.id"))
+    user_id: Mapped[str] = mapped_column(String, ForeignKey("users.id"))
+    role: Mapped[str] = mapped_column(String, default="member")  # owner | member
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class SocialChatMessage(Base):
+    __tablename__ = "social_chat_messages"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=uuid4_str)
+    chat_id: Mapped[str] = mapped_column(String, ForeignKey("social_chats.id"))
+    sender_id: Mapped[str] = mapped_column(String, ForeignKey("users.id"))
+    body: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
 class Journal(Base):

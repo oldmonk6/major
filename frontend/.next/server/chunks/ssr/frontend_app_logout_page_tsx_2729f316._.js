@@ -1,0 +1,3 @@
+module.exports=[35618,a=>{"use strict";var b=a.i(57850),c=a.i(45056);function d(){return(0,c.useEffect)(()=>{localStorage.removeItem("reclaim_token"),localStorage.removeItem("reclaim_user_id"),setTimeout(()=>{window.location.href="/"},500)},[]),(0,b.jsx)("div",{style:{display:"flex",justifyContent:"center",alignItems:"center",minHeight:"100vh",color:"var(--text-primary)"},children:(0,b.jsxs)("div",{style:{textAlign:"center"},children:[(0,b.jsx)("div",{className:"loading-spinner",style:{marginBottom:"1rem"}}),(0,b.jsx)("p",{children:"Signing you out..."})]})})}a.s(["default",()=>d])}];
+
+//# sourceMappingURL=frontend_app_logout_page_tsx_2729f316._.js.map
